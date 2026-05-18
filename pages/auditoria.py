@@ -13,75 +13,88 @@ def render():
     <div class="page-header">
         <h2>🔍 Log de Auditoria</h2>
         <p>Rastreamento completo de ações e acessos no sistema</p>
+    </div>""", unsafe_allow_html=True)
+
+    sucesso = len(df[df["Resultado"]=="Sucesso"])
+    taxa    = sucesso/len(df)*100
+
+    st.markdown(f"""
+    <div class="kpi-wrap" style="padding-top:8px;padding-bottom:8px;">
+      <div class="kpi-grid">
+        <div class="kpi-item">
+          <div class="kpi-label">Total Eventos</div>
+          <div class="kpi-value">{len(df)}</div>
+        </div>
+        <div class="kpi-item" style="padding-left:24px;">
+          <div class="kpi-label">Usuários Únicos</div>
+          <div class="kpi-value">{df['Usuário'].nunique()}</div>
+        </div>
+        <div class="kpi-item" style="padding-left:24px;">
+          <div class="kpi-label">Falhas</div>
+          <div class="kpi-value">{len(df[df['Resultado']=='Falha'])}</div>
+        </div>
+        <div class="kpi-item" style="padding-left:24px;">
+          <div class="kpi-label">Taxa de Sucesso</div>
+          <div class="kpi-value">{taxa:.1f}%</div>
+        </div>
+      </div>
     </div>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 32px 16px;">
     """, unsafe_allow_html=True)
 
-    # KPIs
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Total Eventos", len(df))
-    k2.metric("Usuários Únicos", df["Usuário"].nunique())
-    k3.metric("Falhas", len(df[df["Resultado"]=="Falha"]))
-    k4.metric("Taxa de Sucesso", f"{len(df[df['Resultado']=='Sucesso'])/len(df)*100:.1f}%")
+    st.markdown('<div style="padding:0 32px;">', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Filtros
     c1, c2, c3 = st.columns(3)
     with c1:
-        usuario_f = st.multiselect("Usuário", df["Usuário"].unique(), default=list(df["Usuário"].unique()))
+        us_f = st.multiselect("Usuário", df["Usuário"].unique(), default=list(df["Usuário"].unique()))
     with c2:
-        acao_f = st.multiselect("Ação", df["Ação"].unique(), default=list(df["Ação"].unique()))
+        ac_f = st.multiselect("Ação", df["Ação"].unique(), default=list(df["Ação"].unique()))
     with c3:
-        result_f = st.multiselect("Resultado", df["Resultado"].unique(), default=list(df["Resultado"].unique()))
+        re_f = st.multiselect("Resultado", df["Resultado"].unique(), default=list(df["Resultado"].unique()))
 
-    df_f = df[df["Usuário"].isin(usuario_f) & df["Ação"].isin(acao_f) & df["Resultado"].isin(result_f)]
+    df_f = df[df["Usuário"].isin(us_f) & df["Ação"].isin(ac_f) & df["Resultado"].isin(re_f)]
 
-    # Gráfico de atividade
     col1, col2 = st.columns([3,2])
     with col1:
-        timeline = df_f.groupby(df_f["Timestamp"].dt.date).size().reset_index(name="Eventos")
-        timeline.columns = ["Data","Eventos"]
-        fig = px.line(timeline, x="Data", y="Eventos", title="Atividade Diária",
+        tl = df_f.groupby(df_f["Timestamp"].dt.date).size().reset_index(name="Eventos")
+        tl.columns = ["Data","Eventos"]
+        fig = px.line(tl, x="Data", y="Eventos", title="Atividade Diária",
                       markers=True, color_discrete_sequence=["#3b82f6"])
         fig.update_layout(
             plot_bgcolor="white", paper_bgcolor="white",
-            font_family="DM Sans", title_font_family="Syne",
-            margin=dict(t=40,b=20,l=10,r=10),
-            xaxis=dict(showgrid=False), yaxis=dict(showgrid=True,gridcolor="#f0f4ff")
+            font=dict(family="Inter", size=11, color="#64748b"),
+            title=dict(font=dict(size=13, color="#0f172a"), x=0),
+            margin=dict(t=36, b=20, l=0, r=0),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9"),
+            height=280
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     with col2:
-        por_acao = df_f["Ação"].value_counts().reset_index()
-        por_acao.columns = ["Ação","Qtd"]
-        fig2 = px.bar(por_acao, x="Qtd", y="Ação", orientation="h",
-                      title="Ações mais frequentes",
-                      color_discrete_sequence=["#1a2744"])
+        pa = df_f["Ação"].value_counts().reset_index()
+        pa.columns = ["Ação","Qtd"]
+        fig2 = px.bar(pa, x="Qtd", y="Ação", orientation="h",
+                      title="Ações frequentes",
+                      color_discrete_sequence=["#0f172a"])
         fig2.update_layout(
             plot_bgcolor="white", paper_bgcolor="white",
-            font_family="DM Sans", title_font_family="Syne",
-            margin=dict(t=40,b=20,l=10,r=10),
-            xaxis=dict(showgrid=True,gridcolor="#f0f4ff"), yaxis=dict(showgrid=False)
+            font=dict(family="Inter", size=11, color="#64748b"),
+            title=dict(font=dict(size=13, color="#0f172a"), x=0),
+            margin=dict(t=36, b=20, l=0, r=0),
+            xaxis=dict(showgrid=True, gridcolor="#f1f5f9"),
+            yaxis=dict(showgrid=False),
+            height=280
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
-    # Tabela de logs
-    st.markdown("#### 📋 Registro de Eventos")
     df_show = df_f.sort_values("Timestamp", ascending=False).copy()
     df_show["Timestamp"] = df_show["Timestamp"].dt.strftime("%d/%m/%Y %H:%M:%S")
-
-    def highlight_falha(row):
-        return ['background-color: #fee2e2' if row["Resultado"]=="Falha" else '' for _ in row]
-
     st.dataframe(
         df_show[["ID","Timestamp","Usuário","Ação","Entidade","IP","Resultado"]],
-        use_container_width=True,
-        hide_index=True,
-        height=400,
-        column_config={
-            "Resultado": st.column_config.TextColumn("Resultado", width=90),
-        }
+        use_container_width=True, hide_index=True, height=380
     )
 
     csv = df_f.to_csv(index=False).encode("utf-8")
-    st.download_button("📥 Exportar Log", csv, "auditoria.csv", "text/csv")
+    st.download_button("☁️ Exportar Log", csv, "auditoria.csv", "text/csv")
+    st.markdown('</div>', unsafe_allow_html=True)
